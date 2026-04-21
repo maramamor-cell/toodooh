@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toodooh — Simulateur de Pricing v3.0</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+  .header { background: #0d2b1f; color: white; padding: 18px 28px; display: flex; align-items: center; justify-content: space-between; }
+  .header-logo { font-size: 22px; font-weight: 300; letter-spacing: -0.5px; color: white; }
+  .header-logo span { color: #6ee5a8; }
+  .header-sub { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+  .header-badge { font-size: 11px; background: rgba(110,229,168,0.15); color: #6ee5a8; border: 1px solid rgba(110,229,168,0.3); padding: 4px 12px; border-radius: 99px; }
+  .container { max-width: 1140px; margin: 0 auto; padding: 24px 20px; }
+  .tab-row { display: flex; gap: 6px; margin-bottom: 22px; flex-wrap: wrap; }
+  .tab-btn { font-size: 12px; padding: 6px 16px; border-radius: 99px; border: 1px solid #d0d0cc; cursor: pointer; background: white; color: #666; transition: all 0.15s; white-space: nowrap; }
+  .tab-btn:hover { border-color: #0d2b1f; color: #0d2b1f; }
+  .tab-btn.active { background: #0d2b1f; color: white; border-color: #0d2b1f; }
+  .tab-btn.evt-tab { border-color: #e67e22; color: #e67e22; }
+  .tab-btn.evt-tab.active { background: #e67e22; color: white; border-color: #e67e22; }
+  .tab-btn.panier-tab { border-color: #8e44ad; color: #8e44ad; }
+  .tab-btn.panier-tab.active { background: #8e44ad; color: white; border-color: #8e44ad; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .section { background: white; border-radius: 12px; border: 1px solid #e8e8e5; padding: 18px 22px; margin-bottom: 14px; }
+  .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 14px; padding-bottom: 7px; border-bottom: 1px solid #f0f0ee; display: flex; align-items: center; gap: 8px; }
+  .section-title .tag { font-size: 10px; background: #edf7f3; color: #0F6E56; border: 1px solid #a8dfc5; padding: 2px 7px; border-radius: 99px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+  .section-title .tag-evt { background: #fef0e6; color: #e67e22; border-color: #f5cba7; }
+  .section-title .tag-sps { background: #f0eafa; color: #8e44ad; border-color: #d7bde2; }
+  .grid { display: grid; gap: 12px; }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .grid-auto { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  @media (max-width: 680px) { .grid-2,.grid-3,.grid-4,.grid-auto { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; color: #666; font-weight: 500; }
+  .field .hint { font-size: 10px; color: #aaa; }
+  input[type=number], input[type=text], select { width: 100%; padding: 7px 9px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; color: #1a1a1a; background: white; transition: border 0.15s; }
+  input:focus, select:focus { outline: none; border-color: #1D9E75; }
+  input[type=range] { width: 100%; accent-color: #1D9E75; cursor: pointer; }
+  .metric { background: #f8f8f6; border-radius: 8px; padding: 11px 13px; }
+  .metric-label { font-size: 11px; color: #888; margin-bottom: 3px; }
+  .metric-val { font-size: 20px; font-weight: 500; color: #1a1a1a; }
+  .metric-val.green { color: #0F6E56; }
+  .metric-val.red { color: #c0392b; }
+  .metric-val.orange { color: #e67e22; }
+  .metric-val.purple { color: #8e44ad; }
+  .metric-sub { font-size: 10px; color: #aaa; margin-top: 2px; }
+
+  /* ── Screenhosts ── */
+  .sh-card { background: white; border: 1px solid #e8e8e5; border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; }
+  .sh-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .sh-name-input { font-size: 14px; font-weight: 500; border: none; background: transparent; color: #1a1a1a; padding: 0; width: 180px; }
+  .sh-name-input:focus { outline: none; border-bottom: 1px solid #1D9E75; }
+  .sh-controls { display: flex; align-items: center; gap: 10px; }
+  .refused-toggle { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #888; cursor: pointer; }
+  .refused-toggle input { accent-color: #c0392b; }
+  .remove-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: 15px; }
+  .remove-btn:hover { color: #c0392b; }
+  .add-sh-btn { width: 100%; padding: 9px; border: 1.5px dashed #c8c8c4; border-radius: 10px; background: none; font-size: 12px; color: #888; cursor: pointer; transition: all 0.15s; margin-top: 4px; }
+  .add-sh-btn:hover { border-color: #1D9E75; color: #0F6E56; background: #f0faf6; }
+
+  /* ── SPS Badge ── */
+  .sps-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px; }
+  .sps-high { background: #edf7f3; color: #0F6E56; }
+  .sps-mid { background: #fef9ec; color: #d35400; }
+  .sps-low { background: #fdecea; color: #c0392b; }
+  .sps-bar-bg { height: 4px; background: #f0f0ee; border-radius: 2px; margin-top: 6px; }
+  .sps-bar-fill { height: 4px; border-radius: 2px; transition: width 0.4s; }
+
+  /* ── Résultats SH ── */
+  .sh-result-card { background: white; border: 1px solid #e8e8e5; border-radius: 12px; padding: 14px 18px; margin-bottom: 8px; }
+  .sh-result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .sh-result-name { font-size: 14px; font-weight: 500; }
+  .badge { font-size: 10px; padding: 2px 9px; border-radius: 99px; font-weight: 500; }
+  .badge-accepted { background: #e8f8f1; color: #0F6E56; }
+  .badge-refused { background: #fdecea; color: #c0392b; }
+  .sh-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #f5f5f3; }
+  .sh-row:last-child { border-bottom: none; }
+  .sh-row .lbl { color: #888; }
+  .sh-row .val { font-weight: 500; }
+  .sh-row .val.highlight { color: #0F6E56; font-size: 14px; }
+  .part-bar-bg { height: 4px; background: #f0f0ee; border-radius: 2px; margin-top: 6px; }
+  .part-bar-fill { height: 4px; background: #1D9E75; border-radius: 2px; transition: width 0.3s; }
+
+  /* ── Curseur ── */
+  .slider-info { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; }
+  .slider-info .lbl { font-size: 12px; color: #888; }
+  .slider-info .val { font-size: 18px; font-weight: 500; color: #0F6E56; }
+
+  /* ── Répartition ── */
+  .rep-card { background: #f8f8f6; border-radius: 9px; padding: 12px 14px; text-align: center; }
+  .rep-pct { font-size: 18px; font-weight: 500; }
+  .rep-label { font-size: 10px; color: #888; margin-top: 2px; }
+  .rep-amount { font-size: 13px; font-weight: 500; color: #0F6E56; margin-top: 4px; }
+
+  /* ── Info / warn boxes ── */
+  .info-box { background: #edf7f3; border: 1px solid #a8dfc5; border-radius: 8px; padding: 9px 13px; font-size: 11px; color: #0F6E56; margin-top: 8px; }
+  .warn-box { background: #fef9ec; border: 1px solid #f0d060; border-radius: 8px; padding: 9px 13px; font-size: 11px; color: #7a6000; margin-top: 8px; }
+  .evt-box { background: #fef0e6; border: 1px solid #f5cba7; border-radius: 8px; padding: 9px 13px; font-size: 11px; color: #a04000; margin-top: 8px; }
+
+  /* ── Événements widgets ── */
+  .evt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 10px; }
+  .evt-card { background: white; border: 2px solid #e8e8e5; border-radius: 12px; padding: 14px; cursor: pointer; transition: all 0.15s; position: relative; }
+  .evt-card:hover { border-color: #e67e22; }
+  .evt-card.selected { border-color: #e67e22; background: #fef6ee; }
+  .evt-card .evt-sport { font-size: 28px; text-align: center; margin-bottom: 6px; }
+  .evt-card .evt-name { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+  .evt-card .evt-date { font-size: 11px; color: #888; margin-top: 2px; }
+  .evt-card .evt-duration { font-size: 11px; color: #e67e22; margin-top: 2px; font-weight: 500; }
+  .evt-card .evt-cpm { font-size: 10px; background: #fef0e6; color: #e67e22; border: 1px solid #f5cba7; padding: 2px 6px; border-radius: 99px; display: inline-block; margin-top: 4px; }
+  .evt-card .evt-check { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%; background: #e67e22; color: white; display: none; align-items: center; justify-content: center; font-size: 12px; }
+  .evt-card.selected .evt-check { display: flex; }
+  .evt-categories { font-size: 10px; color: #888; margin-top: 4px; }
+  .see-all-btn { background: none; border: 1px dashed #e67e22; color: #e67e22; border-radius: 10px; padding: 8px 16px; cursor: pointer; font-size: 12px; margin-top: 10px; width: 100%; transition: all 0.15s; }
+  .see-all-btn:hover { background: #fef0e6; }
+
+  /* ── Panier ── */
+  .panier-line { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; }
+  .panier-line.normale { background: #f0faf6; border: 1px solid #a8dfc5; }
+  .panier-line.evt { background: #fef0e6; border: 1px solid #f5cba7; }
+  .panier-line .pl-label { font-size: 13px; font-weight: 500; }
+  .panier-line .pl-amount { font-size: 15px; font-weight: 600; }
+  .panier-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: #0d2b1f; border-radius: 8px; margin-top: 8px; }
+  .panier-total .pt-label { font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 500; }
+  .panier-total .pt-amount { font-size: 20px; font-weight: 600; color: #6ee5a8; }
+
+  /* ── Table R ── */
+  .r-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+  .r-table th { text-align: left; padding: 7px 9px; border-bottom: 1px solid #e8e8e5; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; font-weight: 600; }
+  .r-table td { padding: 7px 9px; border-bottom: 1px solid #f5f5f3; }
+  .r-table tr:last-child td { border-bottom: none; }
+  .highlight-row { background: #f0faf6; }
+
+  /* ── Formula box ── */
+  .formula-box { background: #f0faf6; border-left: 3px solid #1D9E75; padding: 10px 14px; border-radius: 0 8px 8px 0; margin-top: 10px; font-size: 11px; color: #555; line-height: 2; }
+  .formula-box code { font-family: 'SF Mono','Fira Code',monospace; background: #e0f5ec; padding: 1px 5px; border-radius: 3px; font-size: 11px; color: #0F6E56; }
+
+  /* ── SPS detail ── */
+  .sps-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .sps-criterion { background: #f8f8f6; border-radius: 6px; padding: 7px 9px; }
+  .sps-criterion .sc-label { font-size: 10px; color: #888; }
+  .sps-criterion .sc-val { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+  .sps-criterion .sc-bar { height: 3px; background: #f0f0ee; border-radius: 2px; margin-top: 4px; }
+  .sps-criterion .sc-fill { height: 3px; border-radius: 2px; }
+
+  .pct-total { font-size: 12px; font-weight: 500; margin-top: 8px; }
+  .pct-total.ok { color: #0F6E56; }
+  .pct-total.error { color: #c0392b; }
+  .empty-state { text-align: center; padding: 28px; color: #aaa; font-size: 12px; }
+  .footer { text-align: center; padding: 20px; font-size: 10px; color: #aaa; border-top: 1px solid #eee; margin-top: 14px; }
+  h2 { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+  .page-intro { font-size: 12px; color: #888; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-logo">toodooh<span>⟳</span></div>
+    <div class="header-sub">Simulateur de Pricing v3.0 — Campagnes normales + Événements + Score de Priorité Screenhost (SPS)</div>
+  </div>
+  <div class="header-badge">Usage interne confidentiel</div>
+</div>
+
+<div class="container">
+  <div class="tab-row">
+    <button class="tab-btn active" onclick="setTab('params')" id="tab-params">① Paramètres</button>
+    <button class="tab-btn" onclick="setTab('screenhosts')" id="tab-screenhosts">② Établissements & SPS</button>
+    <button class="tab-btn" onclick="setTab('campagne')" id="tab-campagne">③ Campagne normale</button>
+    <button class="tab-btn evt-tab" onclick="setTab('evenement')" id="tab-evenement">④ Événement</button>
+    <button class="tab-btn panier-tab" onclick="setTab('panier')" id="tab-panier">⑤ Panier & Facture</button>
+    <button class="tab-btn" onclick="setTab('rtable')" id="tab-rtable">⑥ Table R</button>
+    <button class="tab-btn" onclick="setTab('formules')" id="tab-formules">⑦ Formules</button>
+  </div>
+
+  <!-- ① PARAMÈTRES -->
+  <div id="panel-params" class="panel active">
+    <div class="section">
+      <div class="section-title">Variables annonceur <span class="tag">Commun aux deux parcours</span></div>
+      <div class="grid grid-2">
+        <div class="field"><label>Durée du spot — S (secondes, max 30)</label><input type="number" id="spot_s" value="10" min="1" max="30" oninput="clampS();recalcAll()"></div>
+        <div class="field"><label>Durée de la campagne normale — N (jours)</label><input type="number" id="camp_n" value="25" min="1" max="365" oninput="recalcAll()"></div>
+      </div>
+      <div class="info-box" id="spot-info"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Variables Toodooh internes <span class="tag">D25 D26 D27 D29</span></div>
+      <div class="grid grid-3">
+        <div class="field"><label>CPM standard — TND/1000 impressions</label><input type="number" id="cpm" value="15" min="0.5" max="200" step="0.5" oninput="recalcAll()"></div>
+        <div class="field"><label>F max — secondes/heure/spot/établissement</label><span class="hint">Défaut 300s (5 min)</span><input type="number" id="f_sec" value="300" min="60" max="3600" step="60" oninput="recalcAll()"></div>
+        <div class="field"><label>Coefficient CPM événement</label><span class="hint">CPM_evt = CPM × coeff. Défaut ×2</span><input type="number" id="evt_coeff" value="2" min="1" max="10" step="0.5" oninput="recalcAll()"></div>
+      </div>
+      <div class="grid grid-3" style="margin-top:12px">
+        <div class="field"><label>T ≤10s</label><input type="number" id="t_short" value="0.5" min="0.01" max="1" step="0.01" oninput="recalcAll()"></div>
+        <div class="field"><label>T ≤20s</label><input type="number" id="t_medium" value="0.65" min="0.01" max="1" step="0.01" oninput="recalcAll()"></div>
+        <div class="field"><label>T ≤30s</label><input type="number" id="t_long" value="0.80" min="0.01" max="1" step="0.01" oninput="recalcAll()"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Répartition des revenus <span class="tag">D22</span></div>
+      <div class="grid grid-4">
+        <div class="field"><label>Screenhosts (%)</label><input type="number" id="pct_sh" value="50" min="0" max="100" oninput="recalcAll()"></div>
+        <div class="field"><label>Toodooh (%)</label><input type="number" id="pct_td" value="44" min="0" max="100" oninput="recalcAll()"></div>
+        <div class="field"><label>Agent Screenhost (%)</label><input type="number" id="pct_ash" value="3" min="0" max="100" oninput="recalcAll()"></div>
+        <div class="field"><label>Agent Screencast (%)</label><input type="number" id="pct_asc" value="3" min="0" max="100" oninput="recalcAll()"></div>
+      </div>
+      <div class="pct-total" id="pct-total-display"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Poids SPS <span class="tag-sps tag">D33</span></div>
+      <p class="page-intro">Ajustez les poids du Score de Priorité Screenhost. La somme doit être 100%.</p>
+      <div class="grid grid-3">
+        <div class="field"><label>w1 — Taux acceptation (%)</label><input type="number" id="w1" value="25" min="0" max="100" oninput="recalcAll()"></div>
+        <div class="field"><label>w2 — Respect événements (%)</label><input type="number" id="w2" value="30" min="0" max="100" oninput="recalcAll()"></div>
+        <div class="field"><label>w3 — Activité écran (%)</label><input type="number" id="w3" value="20" min="0" max="100" oninput="recalcAll()"></div>
+        <div class="field"><label>w4 — Qualité capteur (%)</label><input type="number" id="w4" value="10" min="0" max="100" oninput="recalcAll()"></div>
+        <div class="field"><label>w5 — Ancienneté (%)</label><input type="number" id="w5" value="5" min="0" max="100" oninput="recalcAll()"></div>
+        <div class="field"><label>w6 — Taux remplissage (%)</label><input type="number" id="w6" value="10" min="0" max="100" oninput="recalcAll()"></div>
+      </div>
+      <div class="pct-total" id="sps-weights-display"></div>
+    </div>
+  </div>
+
+  <!-- ② ÉTABLISSEMENTS & SPS -->
+  <div id="panel-screenhosts" class="panel">
+    <div class="section">
+      <div class="section-title">Établissements disponibles <span class="tag-sps tag">Score de Priorité Screenhost calculé dynamiquement</span></div>
+      <p class="page-intro">Renseignez les critères comportementaux de chaque établissement. Le SPS est calculé automatiquement et détermine l'ordre de priorité dans le dispatching.</p>
+      <div id="sh-list"></div>
+      <button class="add-sh-btn" onclick="addScreenhost()">+ Ajouter un établissement</button>
+    </div>
+  </div>
+
+  <!-- ③ CAMPAGNE NORMALE -->
+  <div id="panel-campagne" class="panel">
+    <div class="section">
+      <div class="section-title">Inventaire maximum — Campagne normale <span class="tag">Hors événements</span></div>
+      <p class="page-intro">L'inventaire disponible exclut automatiquement les slots réservés aux événements actifs.</p>
+      <div class="grid grid-4" id="metrics-max-normale"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Curseur budget — Campagne normale</div>
+      <input type="range" id="budget-slider" min="0" max="1000" step="1" value="1000" oninput="recalcAll()">
+      <div class="slider-info"><span class="lbl">Budget sélectionné (C_cible)</span><span class="val" id="slider-display">— TND</span></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Résultats campagne normale</div>
+      <div class="grid grid-4" id="metrics-result-normale"></div>
+      <div id="cascade-info-normale"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Dispatching & reversements <span class="tag">Triés par SPS décroissant</span></div>
+      <div id="sh-results-normale"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Répartition globale — Campagne normale</div>
+      <div class="grid grid-4" id="rep-amounts-normale"></div>
+    </div>
+  </div>
+
+  <!-- ④ ÉVÉNEMENT -->
+  <div id="panel-evenement" class="panel">
+    <div class="section">
+      <div class="section-title">Sélectionnez un événement <span class="tag-evt tag">D28 D29 D30</span></div>
+      <p class="page-intro">Cliquez sur un événement pour le sélectionner. La période et les catégories sont figées automatiquement. Vous choisissez uniquement la zone de diffusion.</p>
+      <div class="evt-grid" id="evt-grid"></div>
+      <button class="see-all-btn" onclick="toggleAllEvents()">Voir tous mes événements ▾</button>
+      <div id="evt-all" style="display:none"></div>
+    </div>
+
+    <div class="section" id="evt-zone-section" style="display:none">
+      <div class="section-title">Zone de diffusion <span class="tag-evt tag">Seul paramètre modifiable</span></div>
+      <div class="grid grid-3">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="zone_tunis" checked onchange="recalcAll()"> Grand Tunis</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="zone_sfax" onchange="recalcAll()"> Sfax</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="zone_sousse" onchange="recalcAll()"> Sousse</label>
+      </div>
+    </div>
+
+    <div id="evt-results-section" style="display:none">
+      <div class="section">
+        <div class="section-title">Inventaire événement <span class="tag-evt tag">CPM × <span id="evt-coeff-display">2</span> — Audience maximale historique</span></div>
+        <div class="grid grid-4" id="metrics-evt"></div>
+        <div class="evt-box" id="evt-info-box"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Curseur budget — Événement</div>
+        <input type="range" id="evt-budget-slider" min="0" max="1000" step="1" value="1000" oninput="recalcAll()">
+        <div class="slider-info"><span class="lbl">Budget événement (C_evt)</span><span class="val" id="evt-slider-display">— TND</span></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Résultats événement</div>
+        <div class="grid grid-4" id="metrics-result-evt"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Dispatching événement <span class="tag-evt tag">Catégories éligibles uniquement · Triés par SPS</span></div>
+        <div id="sh-results-evt"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Répartition — Événement</div>
+        <div class="grid grid-4" id="rep-amounts-evt"></div>
+      </div>
+    </div>
+
+    <div class="section" id="evt-placeholder" style="display:none">
+      <div class="empty-state">Sélectionnez un événement ci-dessus pour voir les résultats.</div>
+    </div>
+  </div>
+
+  <!-- ⑤ PANIER & FACTURE -->
+  <div id="panel-panier" class="panel">
+    <div class="section">
+      <div class="section-title">Panier mixte <span class="tag">D31 — Facture unique avec lignes détaillées</span></div>
+      <p class="page-intro">Récapitulatif de la campagne normale et des événements sélectionnés. La répartition 50/44/3/3 s'applique sur chaque ligne.</p>
+      <div id="panier-content"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Reversements totaux par bénéficiaire</div>
+      <div class="grid grid-4" id="panier-repartition"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Reversements screenhosts — cumul campagne + événement</div>
+      <div id="panier-sh-detail"></div>
+    </div>
+  </div>
+
+  <!-- ⑥ TABLE R -->
+  <div id="panel-rtable" class="panel">
+    <div class="section">
+      <div class="section-title">Table R = MIN[(3600÷S)×T , F÷S] <span class="tag">D27</span></div>
+      <p class="page-intro">F est systématiquement le facteur limitant dans la configuration actuelle.</p>
+      <div id="r-reference-table"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Impact du coefficient événement sur le CPM</div>
+      <div id="evt-cpm-table"></div>
+    </div>
+  </div>
+
+  <!-- ⑦ FORMULES -->
+  <div id="panel-formules" class="panel">
+    <div class="section">
+      <div class="section-title">Algorithme Toodooh v3.0 — Formules complètes</div>
+      <h2>Variables</h2><br>
+      <table class="r-table">
+        <thead><tr><th>Variable</th><th>Définition</th><th>Contrôlée par</th></tr></thead>
+        <tbody>
+          <tr><td><code>S</code></td><td>Durée du spot (max 30s)</td><td style="color:#888">Annonceur</td></tr>
+          <tr><td><code>N</code></td><td>Jours de campagne</td><td style="color:#888">Annonceur</td></tr>
+          <tr><td><code>Ei</code></td><td>Heures d'ouverture/jour</td><td style="color:#888">Screenhost</td></tr>
+          <tr><td><code>Oi</code></td><td>Slots vendus + slots événements bloqués</td><td style="color:#888">Toodooh</td></tr>
+          <tr><td><code>Ai</code></td><td>Affluence horaire moyenne sur slots disponibles</td><td style="color:#888">Capteurs</td></tr>
+          <tr><td><code>A_max_i</code></td><td>Audience maximale historique — utilisée pour les événements</td><td style="color:#888">Capteurs (apprentissage)</td></tr>
+          <tr><td><code>T</code></td><td>Taux répétitions facturables par tranche de durée</td><td style="color:#888">Admin</td></tr>
+          <tr><td><code>F_sec</code></td><td>Secondes max même spot/heure/établissement</td><td style="color:#888">Admin</td></tr>
+          <tr><td><code>CPM</code></td><td>Prix pour 1 000 impressions — campagne normale</td><td style="color:#888">Admin</td></tr>
+          <tr><td><code>CPM_evt</code></td><td>CPM × coefficient — événement</td><td style="color:#888">Admin par événement</td></tr>
+          <tr><td><code>SPS_i</code></td><td>Score de Priorité Screenhost — gouverne l'ordre de dispatching</td><td style="color:#888">Calculé automatiquement</td></tr>
+        </tbody>
+      </table>
+      <br><h2>Campagne normale</h2>
+      <div class="formula-box">
+        <strong>① Disponibilité nette (hors slots événements)</strong><br>
+        <code>Hi = (Ei × N) − Oi_campagnes − Σ Slots_événements_actifs</code><br><br>
+        <strong>② Répétitions facturables</strong><br>
+        <code>R = MIN [ (3600 ÷ S) × T , F_sec ÷ S ]</code><br><br>
+        <strong>③ Impressions par établissement</strong><br>
+        <code>Ii = Ai × Hi × R</code><br><br>
+        <strong>④ Inventaire et prix max</strong><br>
+        <code>I_max = Σ Ii · C_max = (CPM × I_max) ÷ 1000</code><br><br>
+        <strong>⑤ Impressions achetées</strong><br>
+        <code>I_cible = (C_cible × 1000) ÷ CPM</code><br><br>
+        <strong>⑥ Dispatching (trié par SPS décroissant)</strong><br>
+        <code>Part_i = Ii ÷ I_max · Revenu_i = C_cible × 50% × Part_i</code>
+      </div>
+      <br><h2>Événement</h2>
+      <div class="formula-box" style="border-left-color:#e67e22;background:#fef6ee;">
+        <strong>① Fenêtre temporelle (figée)</strong><br>
+        <code>Hi_evt = 1h avant + durée_événement + 1h après</code><br><br>
+        <strong>② Audience maximale historique</strong><br>
+        <code>A_max_i = max(audience enregistrée par les capteurs depuis inscription)</code><br><br>
+        <strong>③ Impressions événement (catégories éligibles seulement)</strong><br>
+        <code>Ii_evt = A_max_i × Hi_evt × R</code><br><br>
+        <strong>④ CPM et coût événement</strong><br>
+        <code>CPM_evt = CPM × coefficient · C_evt = (CPM_evt × I_evt_max) ÷ 1000</code><br><br>
+        <strong>⑤ Dispatching événement</strong><br>
+        <code>Part_i_evt = Ii_evt ÷ I_evt_max · Revenu_i_evt = C_evt × 50% × Part_i_evt</code>
+      </div>
+      <br><h2>Score de Priorité Screenhost (SPS)</h2>
+      <div class="formula-box" style="border-left-color:#8e44ad;background:#f8f0fd;">
+        <code>SPS_i = w1×TxAcceptation + w2×TxRespectÉvénements + w3×TxActivitéÉcran</code><br>
+        <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ w4×QualitéCapteur + w5×Ancienneté + w6×TxRemplissage</code><br><br>
+        <strong>Fenêtre :</strong> 90 jours glissants<br>
+        <strong>Usage :</strong> Tri décroissant des screenhosts avant calcul des Part_i<br>
+        <strong>Transparence :</strong> Visible par le screenhost sur son dashboard — opaque entre screenhosts
+      </div>
+      <br><h2>Panier mixte</h2>
+      <div class="formula-box">
+        <code>C_total = C_cible_normale + Σ C_événements</code><br>
+        <strong>Répartition 50/44/3/3 appliquée sur chaque ligne indépendamment.</strong>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="footer">Toodooh — Simulateur Pricing v3.0 — Campagnes normales + Événements + SPS — Usage interne confidentiel — Avril 2026</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════════
+
+let screenhosts = [
+  { id:1, name:'Café El Bey', opens:8, affluence:55, amax:90, refused:false, eligibleEvt:true,
+    txAccept:0.95, txRespectEvt:1.0, txActivite:0.92, qualiteCapteur:0.90, anciennete:0.8, txRemplissage:0.6, occupied:0 },
+  { id:2, name:'Lounge Arts', opens:6, affluence:40, amax:75, refused:false, eligibleEvt:true,
+    txAccept:0.85, txRespectEvt:0.90, txActivite:0.80, qualiteCapteur:0.85, anciennete:0.5, txRemplissage:0.45, occupied:0 },
+  { id:3, name:'Salle SportPlus', opens:7, affluence:35, amax:60, refused:false, eligibleEvt:false,
+    txAccept:0.75, txRespectEvt:0.70, txActivite:0.70, qualiteCapteur:0.75, anciennete:0.3, txRemplissage:0.40, occupied:0 },
+  { id:4, name:'Bar Le Zinc', opens:5, affluence:30, amax:80, refused:false, eligibleEvt:true,
+    txAccept:0.60, txRespectEvt:0.50, txActivite:0.65, qualiteCapteur:0.60, anciennete:0.2, txRemplissage:0.30, occupied:0 }
+];
+let shCounter = 5;
+
+const EVENTS = [
+  { id:'e1', name:'Champions League — Finale', sport:'⚽', date:'31 Mai 2025', duration:2.5, categories:['Café','Lounge/Bar'], coeff:2, featured:true },
+  { id:'e2', name:'CAN 2025 — Finale', sport:'🏆', date:'19 Juil 2025', duration:2.5, categories:['Café','Lounge/Bar'], coeff:2, featured:true },
+  { id:'e3', name:'Roland Garros — Finale', sport:'🎾', date:'8 Juin 2025', duration:3, categories:['Café','Lounge/Bar'], coeff:2, featured:true },
+  { id:'e4', name:'Formule 1 — GP Monaco', sport:'🏎️', date:'25 Mai 2025', duration:2, categories:['Café','Lounge/Bar'], coeff:2, featured:false },
+  { id:'e5', name:'NBA Finals — Match 7', sport:'🏀', date:'22 Juin 2025', duration:2.5, categories:['Café','Lounge/Bar'], coeff:2, featured:false },
+  { id:'e6', name:'EST vs CA — Clasico', sport:'🟡🔴', date:'14 Jun 2025', duration:2, categories:['Café','Lounge/Bar'], coeff:2, featured:false },
+];
+
+let selectedEventId = null;
+let showAllEvents = false;
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+
+function getT(s) {
+  const ts = +document.getElementById('t_short').value || 0.50;
+  const tm = +document.getElementById('t_medium').value || 0.65;
+  const tl = +document.getElementById('t_long').value || 0.80;
+  if (s <= 10) return ts;
+  if (s <= 20) return tm;
+  return tl;
+}
+function getR(s) {
+  const f = +document.getElementById('f_sec').value || 300;
+  return Math.min((3600/s)*getT(s), f/s);
+}
+function clampS() {
+  const el = document.getElementById('spot_s');
+  if (+el.value > 30) el.value = 30;
+  if (+el.value < 1) el.value = 1;
+}
+function fmt(n) { return Math.round(n).toLocaleString('fr-FR'); }
+function fmtTND(n) { return n.toFixed(2)+' TND'; }
+
+function calcSPS(sh) {
+  const w = getWeights();
+  return (w.w1*sh.txAccept + w.w2*sh.txRespectEvt + w.w3*sh.txActivite
+        + w.w4*sh.qualiteCapteur + w.w5*sh.anciennete + w.w6*sh.txRemplissage) * 100;
+}
+function getWeights() {
+  return {
+    w1: (+document.getElementById('w1').value||25)/100,
+    w2: (+document.getElementById('w2').value||30)/100,
+    w3: (+document.getElementById('w3').value||20)/100,
+    w4: (+document.getElementById('w4').value||10)/100,
+    w5: (+document.getElementById('w5').value||5)/100,
+    w6: (+document.getElementById('w6').value||10)/100
+  };
+}
+function spsColor(sps) {
+  if (sps >= 75) return ['sps-high','#1D9E75'];
+  if (sps >= 50) return ['sps-mid','#d35400'];
+  return ['sps-low','#c0392b'];
+}
+
+function setTab(t) {
+  ['params','screenhosts','campagne','evenement','panier','rtable','formules'].forEach(x => {
+    document.getElementById('panel-'+x).className = 'panel'+(x===t?' active':'');
+    const btn = document.getElementById('tab-'+x);
+    btn.className = btn.className.replace(' active','') + (x===t?' active':'');
+  });
+  if (t==='rtable') updateRTable();
+  recalcAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SCREENHOSTS
+// ═══════════════════════════════════════════════════════════════════
+
+function addScreenhost() {
+  screenhosts.push({ id:shCounter++, name:'Établissement '+shCounter, opens:8, affluence:40, amax:70,
+    refused:false, eligibleEvt:true, txAccept:0.8, txRespectEvt:0.8, txActivite:0.8,
+    qualiteCapteur:0.8, anciennete:0.5, txRemplissage:0.5, occupied:0 });
+  renderScreenhosts(); recalcAll();
+}
+function removeScreenhost(id) {
+  screenhosts = screenhosts.filter(s=>s.id!==id);
+  renderScreenhosts(); recalcAll();
+}
+function updateSH(id, field, val) {
+  const sh = screenhosts.find(s=>s.id===id);
+  if (sh) { sh[field] = field==='refused'||field==='eligibleEvt' ? val : +val; recalcAll(); }
+}
+function updateSHName(id, val) { const sh=screenhosts.find(s=>s.id===id); if(sh) sh.name=val; }
+
+function renderScreenhosts() {
+  const list = document.getElementById('sh-list');
+  if (!screenhosts.length) { list.innerHTML='<div class="empty-state">Aucun établissement.</div>'; return; }
+  list.innerHTML = screenhosts.map(sh => {
+    const sps = calcSPS(sh);
+    const [cls, col] = spsColor(sps);
+    return `<div class="sh-card">
+      <div class="sh-card-header">
+        <input class="sh-name-input" type="text" value="${sh.name}" oninput="updateSHName(${sh.id},this.value)">
+        <div class="sh-controls">
+          <span class="sps-badge ${cls}">SPS ${sps.toFixed(0)}/100</span>
+          <label class="refused-toggle"><input type="checkbox" ${sh.refused?'checked':''} onchange="updateSH(${sh.id},'refused',this.checked);renderScreenhosts()"> Refuse</label>
+          <label class="refused-toggle" style="color:#e67e22"><input type="checkbox" ${sh.eligibleEvt?'checked':''} onchange="updateSH(${sh.id},'eligibleEvt',this.checked);renderScreenhosts()"> Éligible événements</label>
+          <button class="remove-btn" onclick="removeScreenhost(${sh.id})">✕</button>
+        </div>
+      </div>
+      <div class="grid grid-4" style="margin-bottom:10px">
+        <div class="field"><label>Heures/jour (Ei)</label><input type="number" value="${sh.opens}" min="1" max="24" step="0.5" oninput="updateSH(${sh.id},'opens',this.value)"></div>
+        <div class="field"><label>Affluence/h (Ai)</label><input type="number" value="${sh.affluence}" min="0" oninput="updateSH(${sh.id},'affluence',this.value)"></div>
+        <div class="field"><label>A_max historique</label><input type="number" value="${sh.amax}" min="0" oninput="updateSH(${sh.id},'amax',this.value)"></div>
+        <div class="field"><label>Slots vendus (Oi)</label><input type="number" value="${sh.occupied}" min="0" oninput="updateSH(${sh.id},'occupied',this.value)"></div>
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:6px;font-weight:600">CRITÈRES SPS (valeurs entre 0 et 1)</div>
+      <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:8px">
+        <div class="field"><label>Taux acceptation (w1)</label><input type="number" value="${sh.txAccept}" min="0" max="1" step="0.01" oninput="updateSH(${sh.id},'txAccept',this.value)"></div>
+        <div class="field"><label>Respect événements (w2)</label><input type="number" value="${sh.txRespectEvt}" min="0" max="1" step="0.01" oninput="updateSH(${sh.id},'txRespectEvt',this.value)"></div>
+        <div class="field"><label>Activité écran (w3)</label><input type="number" value="${sh.txActivite}" min="0" max="1" step="0.01" oninput="updateSH(${sh.id},'txActivite',this.value)"></div>
+        <div class="field"><label>Qualité capteur (w4)</label><input type="number" value="${sh.qualiteCapteur}" min="0" max="1" step="0.01" oninput="updateSH(${sh.id},'qualiteCapteur',this.value)"></div>
+        <div class="field"><label>Ancienneté (w5)</label><input type="number" value="${sh.anciennete}" min="0" max="1" step="0.01" oninput="updateSH(${sh.id},'anciennete',this.value)"></div>
+        <div class="field"><label>Taux remplissage (w6)</label><input type="number" value="${sh.txRemplissage}" min="0" max="1" step="0.01" oninput="updateSH(${sh.id},'txRemplissage',this.value)"></div>
+      </div>
+      <div class="sps-bar-bg" style="margin-top:10px"><div class="sps-bar-fill" style="width:${sps}%;background:${col}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ÉVÉNEMENTS
+// ═══════════════════════════════════════════════════════════════════
+
+function renderEvents() {
+  const featured = EVENTS.filter(e=>e.featured);
+  const all = EVENTS.filter(e=>!e.featured);
+  const coeff = +document.getElementById('evt_coeff').value || 2;
+
+  document.getElementById('evt-coeff-display').textContent = coeff;
+
+  document.getElementById('evt-grid').innerHTML = featured.map(e => evtCardHTML(e, coeff)).join('');
+  document.getElementById('evt-all').innerHTML = `<div class="evt-grid" style="margin-top:12px">${all.map(e=>evtCardHTML(e,coeff)).join('')}</div>`;
+}
+
+function evtCardHTML(e, coeff) {
+  const sel = selectedEventId === e.id;
+  const cpm = (+document.getElementById('cpm').value||15) * coeff;
+  return `<div class="evt-card${sel?' selected':''}" onclick="selectEvent('${e.id}')">
+    <div class="evt-check">✓</div>
+    <div class="evt-sport">${e.sport}</div>
+    <div class="evt-name">${e.name}</div>
+    <div class="evt-date">📅 ${e.date}</div>
+    <div class="evt-duration">⏱ ${e.duration}h de diffusion (+1h avant/après)</div>
+    <div class="evt-cpm">CPM événement : ${cpm.toFixed(1)} TND</div>
+    <div class="evt-categories">${e.categories.join(' · ')}</div>
+  </div>`;
+}
+
+function selectEvent(id) {
+  selectedEventId = selectedEventId === id ? null : id;
+  renderEvents();
+  document.getElementById('evt-zone-section').style.display = selectedEventId ? '' : 'none';
+  document.getElementById('evt-results-section').style.display = selectedEventId ? '' : 'none';
+  document.getElementById('evt-placeholder').style.display = selectedEventId ? 'none' : '';
+  recalcAll();
+}
+
+function toggleAllEvents() {
+  showAllEvents = !showAllEvents;
+  const el = document.getElementById('evt-all');
+  el.style.display = showAllEvents ? '' : 'none';
+  document.querySelector('.see-all-btn').textContent = showAllEvents ? 'Masquer ▴' : 'Voir tous mes événements ▾';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CALCUL PRINCIPAL
+// ═══════════════════════════════════════════════════════════════════
+
+function recalcAll() {
+  updateSpotInfo();
+  checkPctTotal();
+  checkSPSWeights();
+  recalcNormale();
+  recalcEvenement();
+  recalcPanier();
+}
+
+function updateSpotInfo() {
+  const S = +document.getElementById('spot_s').value || 10;
+  const T = getT(S);
+  const F = +document.getElementById('f_sec').value || 300;
+  const R = getR(S);
+  const lim = (F/S) <= (3600/S)*T ? 'F (fréquence max)' : 'T (crédibilité)';
+  document.getElementById('spot-info').innerHTML =
+    `Spot <strong>${S}s</strong> → T = <strong>${T}</strong> → R_T = ${((3600/S)*T).toFixed(1)}/h · F = ${F}s → R_F = ${(F/S).toFixed(1)}/h · <strong>R retenu = ${R.toFixed(1)} passages/h</strong> (limitant : ${lim})`;
+}
+
+function checkPctTotal() {
+  const t = (+document.getElementById('pct_sh').value||0) + (+document.getElementById('pct_td').value||0)
+          + (+document.getElementById('pct_ash').value||0) + (+document.getElementById('pct_asc').value||0);
+  const el = document.getElementById('pct-total-display');
+  el.textContent = `Total : ${t}%` + (Math.abs(t-100)>0.01?' ⚠ Doit être 100%':' ✓');
+  el.className = 'pct-total '+(Math.abs(t-100)>0.01?'error':'ok');
+}
+
+function checkSPSWeights() {
+  const w = getWeights();
+  const t = (w.w1+w.w2+w.w3+w.w4+w.w5+w.w6)*100;
+  const el = document.getElementById('sps-weights-display');
+  el.textContent = `Total poids SPS : ${t.toFixed(0)}%`+(Math.abs(t-100)>0.5?' ⚠ Doit être 100%':' ✓');
+  el.className = 'pct-total '+(Math.abs(t-100)>0.5?'error':'ok');
+}
+
+// ─── CAMPAGNE NORMALE ─────────────────────────────────────────────
+function recalcNormale() {
+  const S = +document.getElementById('spot_s').value || 10;
+  const N = +document.getElementById('camp_n').value || 25;
+  const CPM = +document.getElementById('cpm').value || 15;
+  const R = getR(S);
+  const pct_sh = +document.getElementById('pct_sh').value || 50;
+  const pct_td = +document.getElementById('pct_td').value || 44;
+  const pct_ash = +document.getElementById('pct_ash').value || 3;
+  const pct_asc = +document.getElementById('pct_asc').value || 3;
+
+  // Slots événements bloqués (1h avant + durée + 1h après)
+  const evtSlots = selectedEventId ? (() => {
+    const e = EVENTS.find(x=>x.id===selectedEventId);
+    return e ? (1 + e.duration + 1) : 0;
+  })() : 0;
+
+  // Screenhosts actifs triés par SPS
+  const active = screenhosts.filter(s=>!s.refused)
+    .map(s=>({...s, sps:calcSPS(s)}))
+    .sort((a,b)=>b.sps-a.sps);
+  const refused = screenhosts.filter(s=>s.refused);
+
+  const items = active.map(s => {
+    const Hi = Math.max(0, (s.opens * N) - s.occupied - evtSlots);
+    const Ii = s.affluence * Hi * R;
+    return { ...s, Hi, Ii };
+  });
+
+  const I_max = items.reduce((a,s)=>a+s.Ii, 0);
+  const C_max = (CPM * I_max) / 1000;
+
+  const slider = document.getElementById('budget-slider');
+  if (slider) { slider.max = Math.max(1, Math.ceil(C_max)); if (+slider.value > +slider.max) slider.value = slider.max; }
+  const C_cible = Math.min(+(slider?.value)||C_max, C_max);
+  const taux_fill = I_max > 0 ? C_cible / C_max : 0;
+  const I_cible = CPM > 0 ? (C_cible*1000)/CPM : 0;
+
+  if (document.getElementById('slider-display')) document.getElementById('slider-display').textContent = fmtTND(C_cible);
+
+  const mm = document.getElementById('metrics-max-normale');
+  if (mm) mm.innerHTML = `
+    <div class="metric"><div class="metric-label">Impressions max disponibles</div><div class="metric-val">${fmt(I_max)}</div><div class="metric-sub">R = ${R.toFixed(0)} pass./h${evtSlots>0?` · −${evtSlots}h/étab. (événement)`:''}  </div></div>
+    <div class="metric"><div class="metric-label">Budget maximum (C_max)</div><div class="metric-val green">${fmtTND(C_max)}</div></div>
+    <div class="metric"><div class="metric-label">Établissements actifs</div><div class="metric-val">${active.length}<span style="font-size:12px;color:#aaa"> / ${screenhosts.length}</span></div></div>
+    <div class="metric"><div class="metric-label">Meilleur SPS réseau</div><div class="metric-val purple">${active.length?active[0].sps.toFixed(0):0}/100</div></div>`;
+
+  const mr = document.getElementById('metrics-result-normale');
+  if (mr) mr.innerHTML = `
+    <div class="metric"><div class="metric-label">Budget sélectionné</div><div class="metric-val green">${fmtTND(C_cible)}</div></div>
+    <div class="metric"><div class="metric-label">Impressions achetées</div><div class="metric-val">${fmt(I_cible)}</div></div>
+    <div class="metric"><div class="metric-label">Taux de remplissage</div><div class="metric-val">${(taux_fill*100).toFixed(1)}%</div></div>
+    <div class="metric"><div class="metric-label">Screenhosts refusants</div><div class="metric-val ${refused.length>0?'red':''}">${refused.length}</div>${refused.length?'<div class="metric-sub">Cascade activée</div>':''}</div>`;
+
+  const ci = document.getElementById('cascade-info-normale');
+  if (ci) ci.innerHTML = refused.length>0 ? `<div class="warn-box"><strong>Cascade activée :</strong> ${refused.map(s=>s.name).join(', ')} ${refused.length>1?'ont refusé':'a refusé'}. Redistribution vers les screenhosts acceptants dans l'ordre du SPS.</div>` : '';
+
+  const shr = document.getElementById('sh-results-normale');
+  if (shr) {
+    if (!active.length) { shr.innerHTML='<div class="empty-state">Aucun screenhost actif.</div>'; }
+    else {
+      shr.innerHTML = items.map((s,idx) => {
+        const part = I_max>0 ? s.Ii/I_max : 0;
+        const rev = C_cible*(pct_sh/100)*part;
+        const [cls] = spsColor(s.sps);
+        return `<div class="sh-result-card">
+          <div class="sh-result-header">
+            <span class="sh-result-name">${s.name} <span class="sps-badge ${cls}" style="font-size:10px">SPS ${s.sps.toFixed(0)}</span> ${idx===0?'<span style="font-size:10px;color:#8e44ad;font-weight:600">★ Priorité 1</span>':''}</span>
+            <span class="badge badge-accepted">Accepté</span>
+          </div>
+          <div class="sh-row"><span class="lbl">Disponibilité nette Hi</span><span class="val">${s.Hi.toFixed(0)} h</span></div>
+          <div class="sh-row"><span class="lbl">Impressions Ii</span><span class="val">${fmt(s.Ii)}</span></div>
+          <div class="sh-row"><span class="lbl">Part campagne</span><span class="val">${(part*100).toFixed(2)}%</span></div>
+          <div class="sh-row"><span class="lbl">Revenu prévisionnel</span><span class="val highlight">${fmtTND(rev)}</span></div>
+          <div class="part-bar-bg"><div class="part-bar-fill" style="width:${Math.round(part*100)}%"></div></div>
+        </div>`;
+      }).join('') + refused.map(s=>`<div class="sh-result-card" style="opacity:0.5"><div class="sh-result-header"><span class="sh-result-name">${s.name}</span><span class="badge badge-refused">Refusé</span></div><div class="sh-row"><span class="lbl">Revenu</span><span class="val" style="color:#c0392b">0,00 TND</span></div></div>`).join('');
+    }
+  }
+
+  const ra = document.getElementById('rep-amounts-normale');
+  if (ra) ra.innerHTML = `
+    <div class="rep-card"><div class="rep-pct">${pct_sh}%</div><div class="rep-label">Screenhosts</div><div class="rep-amount">${fmtTND(C_cible*pct_sh/100)}</div></div>
+    <div class="rep-card"><div class="rep-pct">${pct_td}%</div><div class="rep-label">Toodooh</div><div class="rep-amount">${fmtTND(C_cible*pct_td/100)}</div></div>
+    <div class="rep-card"><div class="rep-pct">${pct_ash}%</div><div class="rep-label">Agent SH</div><div class="rep-amount">${fmtTND(C_cible*pct_ash/100)}</div></div>
+    <div class="rep-card"><div class="rep-pct">${pct_asc}%</div><div class="rep-label">Agent SC</div><div class="rep-amount">${fmtTND(C_cible*pct_asc/100)}</div></div>`;
+
+  // Store for panier
+  window._normaleResult = { C_cible, I_cible, taux_fill, items, I_max, pct_sh, pct_td, pct_ash, pct_asc };
+}
+
+// ─── ÉVÉNEMENT ───────────────────────────────────────────────────
+function recalcEvenement() {
+  renderEvents();
+  if (!selectedEventId) return;
+
+  const evt = EVENTS.find(e=>e.id===selectedEventId);
+  if (!evt) return;
+
+  const S = +document.getElementById('spot_s').value || 10;
+  const CPM = +document.getElementById('cpm').value || 15;
+  const coeff = +document.getElementById('evt_coeff').value || 2;
+  const CPM_evt = CPM * coeff;
+  const R = getR(S);
+  const pct_sh = +document.getElementById('pct_sh').value || 50;
+  const pct_td = +document.getElementById('pct_td').value || 44;
+  const pct_ash = +document.getElementById('pct_ash').value || 3;
+  const pct_asc = +document.getElementById('pct_asc').value || 3;
+
+  const Hi_evt = 1 + evt.duration + 1; // fenêtre totale en heures
+
+  // Seuls les établissements éligibles aux événements + non refusés + triés par SPS
+  const eligible = screenhosts
+    .filter(s => !s.refused && s.eligibleEvt)
+    .map(s => ({ ...s, sps: calcSPS(s) }))
+    .sort((a,b) => b.sps - a.sps);
+
+  const items_evt = eligible.map(s => {
+    const Ii_evt = s.amax * Hi_evt * R;
+    return { ...s, Hi_evt, Ii_evt };
+  });
+
+  const I_evt_max = items_evt.reduce((a,s)=>a+s.Ii_evt, 0);
+  const C_evt_max = (CPM_evt * I_evt_max) / 1000;
+
+  const evtSlider = document.getElementById('evt-budget-slider');
+  if (evtSlider) { evtSlider.max = Math.max(1, Math.ceil(C_evt_max)); if (+evtSlider.value > +evtSlider.max) evtSlider.value = evtSlider.max; }
+  const C_evt = Math.min(+(evtSlider?.value)||C_evt_max, C_evt_max);
+  const I_evt_cible = CPM_evt > 0 ? (C_evt*1000)/CPM_evt : 0;
+
+  if (document.getElementById('evt-slider-display')) document.getElementById('evt-slider-display').textContent = fmtTND(C_evt);
+
+  const me = document.getElementById('metrics-evt');
+  if (me) me.innerHTML = `
+    <div class="metric"><div class="metric-label">Impressions max événement</div><div class="metric-val orange">${fmt(I_evt_max)}</div><div class="metric-sub">A_max × ${Hi_evt}h × R</div></div>
+    <div class="metric"><div class="metric-label">Budget max événement</div><div class="metric-val orange">${fmtTND(C_evt_max)}</div></div>
+    <div class="metric"><div class="metric-label">CPM événement</div><div class="metric-val orange">${fmtTND(CPM_evt)}</div><div class="metric-sub">= ${CPM} TND × ${coeff}</div></div>
+    <div class="metric"><div class="metric-label">Établissements éligibles</div><div class="metric-val">${eligible.length}</div><div class="metric-sub">${evt.categories.join(' · ')}</div></div>`;
+
+  const ib = document.getElementById('evt-info-box');
+  if (ib) ib.innerHTML = `<strong>${evt.name}</strong> · ${evt.date} · ${evt.duration}h de match · Fenêtre totale : ${Hi_evt}h (1h avant + ${evt.duration}h + 1h après) · Catégories : ${evt.categories.join(', ')} · CPM : ${CPM_evt.toFixed(1)} TND`;
+
+  const mre = document.getElementById('metrics-result-evt');
+  if (mre) mre.innerHTML = `
+    <div class="metric"><div class="metric-label">Budget sélectionné</div><div class="metric-val orange">${fmtTND(C_evt)}</div></div>
+    <div class="metric"><div class="metric-label">Impressions achetées</div><div class="metric-val">${fmt(I_evt_cible)}</div></div>
+    <div class="metric"><div class="metric-label">Taux de remplissage</div><div class="metric-val">${I_evt_max>0?((C_evt/C_evt_max)*100).toFixed(1):0}%</div></div>
+    <div class="metric"><div class="metric-label">Fenêtre temporelle</div><div class="metric-val orange">${Hi_evt}h</div><div class="metric-sub">Figée · non modifiable</div></div>`;
+
+  const sre = document.getElementById('sh-results-evt');
+  if (sre) {
+    sre.innerHTML = items_evt.map((s,idx) => {
+      const part = I_evt_max>0 ? s.Ii_evt/I_evt_max : 0;
+      const rev = C_evt*(pct_sh/100)*part;
+      const [cls] = spsColor(s.sps);
+      return `<div class="sh-result-card" style="border-left:3px solid #e67e22">
+        <div class="sh-result-header">
+          <span class="sh-result-name">${s.name} <span class="sps-badge ${cls}" style="font-size:10px">SPS ${s.sps.toFixed(0)}</span></span>
+          <span class="badge" style="background:#fef0e6;color:#e67e22">Éligible événement</span>
+        </div>
+        <div class="sh-row"><span class="lbl">A_max historique</span><span class="val">${s.amax} pers/h</span></div>
+        <div class="sh-row"><span class="lbl">Fenêtre événement (Hi_evt)</span><span class="val">${Hi_evt}h</span></div>
+        <div class="sh-row"><span class="lbl">Impressions Ii_evt</span><span class="val">${fmt(s.Ii_evt)}</span></div>
+        <div class="sh-row"><span class="lbl">Part événement</span><span class="val">${(part*100).toFixed(2)}%</span></div>
+        <div class="sh-row"><span class="lbl">Revenu prévisionnel événement</span><span class="val" style="color:#e67e22;font-size:14px">${fmtTND(rev)}</span></div>
+        <div class="part-bar-bg"><div class="part-bar-fill" style="width:${Math.round(part*100)}%;background:#e67e22"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  const rae = document.getElementById('rep-amounts-evt');
+  if (rae) rae.innerHTML = `
+    <div class="rep-card" style="border:1px solid #f5cba7"><div class="rep-pct" style="color:#e67e22">${pct_sh}%</div><div class="rep-label">Screenhosts</div><div class="rep-amount">${fmtTND(C_evt*pct_sh/100)}</div></div>
+    <div class="rep-card" style="border:1px solid #f5cba7"><div class="rep-pct" style="color:#e67e22">${pct_td}%</div><div class="rep-label">Toodooh</div><div class="rep-amount">${fmtTND(C_evt*pct_td/100)}</div></div>
+    <div class="rep-card" style="border:1px solid #f5cba7"><div class="rep-pct" style="color:#e67e22">${pct_ash}%</div><div class="rep-label">Agent SH</div><div class="rep-amount">${fmtTND(C_evt*pct_ash/100)}</div></div>
+    <div class="rep-card" style="border:1px solid #f5cba7"><div class="rep-pct" style="color:#e67e22">${pct_asc}%</div><div class="rep-label">Agent SC</div><div class="rep-amount">${fmtTND(C_evt*pct_asc/100)}</div></div>`;
+
+  window._evtResult = { C_evt, I_evt_cible, items_evt, I_evt_max, evt, CPM_evt, pct_sh, pct_td, pct_ash, pct_asc };
+}
+
+// ─── PANIER ──────────────────────────────────────────────────────
+function recalcPanier() {
+  const norm = window._normaleResult;
+  const evtr = window._evtResult;
+
+  const pct_sh = +document.getElementById('pct_sh').value || 50;
+  const pct_td = +document.getElementById('pct_td').value || 44;
+  const pct_ash = +document.getElementById('pct_ash').value || 3;
+  const pct_asc = +document.getElementById('pct_asc').value || 3;
+
+  const C_normale = norm ? norm.C_cible : 0;
+  const C_evt = evtr ? evtr.C_evt : 0;
+  const C_total = C_normale + C_evt;
+
+  const pc = document.getElementById('panier-content');
+  if (pc) {
+    let html = '';
+    if (C_normale > 0) {
+      html += `<div class="panier-line normale">
+        <div><div class="pl-label">📺 Campagne normale</div><div style="font-size:11px;color:#0F6E56">${norm?fmt(norm.I_cible):0} impressions · ${norm?(norm.taux_fill*100).toFixed(1):0}% fill rate</div></div>
+        <div class="pl-amount" style="color:#0F6E56">${fmtTND(C_normale)}</div>
+      </div>`;
+    } else {
+      html += `<div class="panier-line normale" style="opacity:0.5"><div class="pl-label">📺 Campagne normale</div><div style="font-size:11px;color:#888">Non configurée — allez dans l'onglet ③</div></div>`;
+    }
+    if (C_evt > 0 && evtr) {
+      html += `<div class="panier-line evt">
+        <div><div class="pl-label">⚡ ${evtr.evt.name}</div><div style="font-size:11px;color:#e67e22">${fmt(evtr.I_evt_cible)} impressions · CPM ${evtr.CPM_evt.toFixed(1)} TND</div></div>
+        <div class="pl-amount" style="color:#e67e22">${fmtTND(C_evt)}</div>
+      </div>`;
+    } else {
+      html += `<div class="panier-line evt" style="opacity:0.5"><div class="pl-label">⚡ Événement</div><div style="font-size:11px;color:#888">Non sélectionné — allez dans l'onglet ④</div></div>`;
+    }
+    html += `<div class="panier-total"><span class="pt-label">Total panier</span><span class="pt-amount">${fmtTND(C_total)}</span></div>`;
+    pc.innerHTML = html;
+  }
+
+  const pr = document.getElementById('panier-repartition');
+  if (pr) pr.innerHTML = `
+    <div class="rep-card"><div class="rep-pct">${pct_sh}%</div><div class="rep-label">Screenhosts</div><div class="rep-amount">${fmtTND(C_total*pct_sh/100)}</div></div>
+    <div class="rep-card"><div class="rep-pct">${pct_td}%</div><div class="rep-label">Toodooh</div><div class="rep-amount">${fmtTND(C_total*pct_td/100)}</div></div>
+    <div class="rep-card"><div class="rep-pct">${pct_ash}%</div><div class="rep-label">Agent SH</div><div class="rep-amount">${fmtTND(C_total*pct_ash/100)}</div></div>
+    <div class="rep-card"><div class="rep-pct">${pct_asc}%</div><div class="rep-label">Agent SC</div><div class="rep-amount">${fmtTND(C_total*pct_asc/100)}</div></div>`;
+
+  // Cumul par screenhost
+  const psd = document.getElementById('panier-sh-detail');
+  if (psd) {
+    const map = {};
+    if (norm && norm.items && norm.I_max > 0) {
+      norm.items.forEach(s => {
+        const part = s.Ii / norm.I_max;
+        const rev = norm.C_cible * (pct_sh/100) * part;
+        map[s.id] = { name: s.name, sps: s.sps, normale: rev, evt: 0 };
+      });
+    }
+    if (evtr && evtr.items_evt && evtr.I_evt_max > 0) {
+      evtr.items_evt.forEach(s => {
+        const part = s.Ii_evt / evtr.I_evt_max;
+        const rev = evtr.C_evt * (pct_sh/100) * part;
+        if (map[s.id]) map[s.id].evt = rev;
+        else map[s.id] = { name: s.name, sps: s.sps||0, normale: 0, evt: rev };
+      });
+    }
+    const sorted = Object.values(map).sort((a,b)=>(b.normale+b.evt)-(a.normale+a.evt));
+    if (!sorted.length) { psd.innerHTML='<div class="empty-state">Configurez une campagne et/ou un événement.</div>'; return; }
+    psd.innerHTML = sorted.map(s => {
+      const total = s.normale + s.evt;
+      const [cls] = spsColor(s.sps||0);
+      return `<div class="sh-result-card">
+        <div class="sh-result-header">
+          <span class="sh-result-name">${s.name} <span class="sps-badge ${cls}" style="font-size:10px">SPS ${(s.sps||0).toFixed(0)}</span></span>
+          <span style="font-size:16px;font-weight:600;color:#0F6E56">${fmtTND(total)}</span>
+        </div>
+        ${s.normale>0?`<div class="sh-row"><span class="lbl">📺 Campagne normale</span><span class="val" style="color:#0F6E56">${fmtTND(s.normale)}</span></div>`:''}
+        ${s.evt>0?`<div class="sh-row"><span class="lbl">⚡ Événement</span><span class="val" style="color:#e67e22">${fmtTND(s.evt)}</span></div>`:''}
+      </div>`;
+    }).join('');
+  }
+}
+
+// ─── TABLE R ─────────────────────────────────────────────────────
+function updateRTable() {
+  const CPM = +document.getElementById('cpm').value || 15;
+  const F = +document.getElementById('f_sec').value || 300;
+  const coeff = +document.getElementById('evt_coeff').value || 2;
+  const durees = [5,10,15,20,25,30];
+
+  const rt = document.getElementById('r-reference-table');
+  if (rt) rt.innerHTML = `<table class="r-table">
+    <thead><tr><th>S</th><th>Tranche T</th><th>T</th><th>R_T</th><th>R_F (F=${F}s)</th><th>R retenu</th><th>Limitant</th></tr></thead>
+    <tbody>${durees.map(s=>{
+      const T=getT(s); const rt2=(3600/s)*T; const rf=F/s; const R=Math.min(rt2,rf); const lim=rf<=rt2?'F':'T';
+      return `<tr class="${lim==='F'?'highlight-row':''}">
+        <td><strong>${s}s</strong></td><td>${s<=10?'≤10s':s<=20?'≤20s':'≤30s'}</td><td>${T}</td>
+        <td>${rt2.toFixed(1)}</td><td style="color:#d35400"><strong>${rf.toFixed(1)}</strong></td>
+        <td style="color:#0F6E56"><strong>${R.toFixed(1)}</strong></td>
+        <td>${lim==='F'?'<span style="color:#d35400">F — fréquence max</span>':'T'}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+
+  const et = document.getElementById('evt-cpm-table');
+  if (et) et.innerHTML = `<table class="r-table">
+    <thead><tr><th>CPM standard</th><th>Coefficient</th><th>CPM événement</th><th>Écart</th></tr></thead>
+    <tbody>
+      <tr><td>${CPM} TND</td><td>×${coeff}</td><td style="color:#e67e22;font-weight:600">${(CPM*coeff).toFixed(1)} TND</td><td style="color:#e67e22">+${((coeff-1)*100).toFixed(0)}%</td></tr>
+    </tbody></table>
+    <div class="evt-box" style="margin-top:8px">CPM événement = ${(CPM*coeff).toFixed(1)} TND · Audience utilisée = A_max_i (maximum historique capteurs) · Acceptation irrévocable après notification</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+renderScreenhosts();
+renderEvents();
+document.getElementById('evt-placeholder').style.display = '';
+recalcAll();
+</script>
+</body>
+</html>
